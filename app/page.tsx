@@ -1,4 +1,4 @@
-﻿export default function Home(): JSX.Element {
+﻿export default function Home() {
   return (
     <main style={{ padding: 24 }}>
       <h1>Huddle</h1>
