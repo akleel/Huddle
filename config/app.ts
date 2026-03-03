@@ -1,3 +1,4 @@
-﻿export const appConfig = {
+﻿
+export const appConfig = {
   name: "Huddle",
 } as const;
