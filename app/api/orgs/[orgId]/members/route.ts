@@ -1,13 +1,35 @@
-// shared/auth/dev-auth.ts
-import { UnauthorizedError } from "@/shared/http/errors";
+// app/api/orgs/[orgId]/members/route.ts
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
+import { getDevUserId } from "@/shared/auth/dev-auth";
+import { requireOrgPermission } from "@/features/orgs/server/guards";
+import { prisma } from "@/shared/db/prisma";
+import { AppError } from "@/shared/http/errors";
 
-/**
- * Temporary dev-only auth until Clerk/NextAuth is wired.
- * Provide a user id via header: x-user-id
- */
-export function getDevUserId(req: NextRequest): string {
-  const userId = req.headers.get("x-user-id");
-  if (!userId) throw new UnauthorizedError('Missing "x-user-id" header.');
-  return userId;
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ orgId: string }> }
+): Promise<NextResponse> {
+  try {
+    const userId = getDevUserId(req);
+    const { orgId } = await ctx.params;
+
+    await requireOrgPermission({ userId, orgId, permission: "org:members:read" });
+
+    const members = await prisma.membership.findMany({
+      where: { orgId },
+      select: {
+        role: true,
+        user: { select: { id: true, email: true, externalId: true } },
+      },
+      orderBy: { createdAt: "asc" },
+    });
+
+    return NextResponse.json({ orgId, members });
+  } catch (err: unknown) {
+    if (err instanceof AppError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }
