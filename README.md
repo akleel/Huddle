@@ -1,7 +1,7 @@
 
 **Huddle** is a **multi-tenant client portal** where teams collaborate with customers — built as a production-style full-stack project.
 
-> Focus: **tenant isolation**, **RBAC**, **audit logs**, and (next) **Stripe subscriptions** + real auth.
+> Focus: **tenant isolation**, **RBAC**, **audit logs**, and (next) **Stripe subscriptions**.
 
 ---
 
@@ -27,8 +27,8 @@ Most "portfolio apps" are single-tenant and skip the hard parts. Huddle is desig
 ## Tech stack
 
 - **Next.js** (App Router) + **TypeScript**
-- **Postgres** (Neon)
-- **Prisma v7** (Postgres adapter)
+- **Clerk** (auth — modal sign-in/sign-up, middleware route protection)
+- **Postgres** (Neon) + **Prisma v7** (Postgres adapter)
 - **Zod** (typed env)
 - **ESLint** + **Tailwind**
 
@@ -57,7 +57,7 @@ Key folders:
 This repo is intentionally built in small, reviewable milestones so it's easy to follow progress from day 1.
 
 - Small, scoped commits (easy to review)
-- Each milestone is its own commit (scaffold → db → multi-tenancy → RBAC → billing)
+- Each milestone is its own commit (scaffold → db → multi-tenancy → RBAC → auth → billing)
 
 ---
 
@@ -70,19 +70,21 @@ This repo is intentionally built in small, reviewable milestones so it's easy to
 - ✅ Core multi-tenant schema: User, Org, Membership, AuditLog
 - ✅ RBAC helpers + server-side permission guard
 - ✅ Example protected endpoint: `GET /api/orgs/:orgId/members` *(dev-only `x-user-id` header for now)*
+- ✅ Clerk auth for UI + route protection (API user mapping pending)
+- ✅ Seed script (`npm run seed`) — demo org, users, memberships, audit logs
 
 **Planned next:**
 
-- ⏳ Real auth (Clerk or NextAuth)
+- ⏳ Replace dev-only `x-user-id` header with Clerk session in API routes
 - ⏳ Stripe subscriptions + webhooks + entitlement gating
 - ⏳ Projects/Cases module + file uploads
-- ⏳ Seed script + E2E tests + CI
+- ⏳ E2E tests + CI
 
 ---
 
 ## Getting started (local)
 
-> Requires **Node 18+** and a Postgres database (Neon recommended).
+> Requires **Node 18+** (**Node 20 LTS recommended**). Postgres database required (Neon recommended).
 
 ### 1) Install dependencies
 
@@ -93,12 +95,14 @@ npm install
 ### 2) Environment variables
 
 Create `.env` (for Prisma CLI) and `.env.local` (for Next.js runtime).
-These files are ignored by git.
+Prisma CLI reads `.env`; Next.js reads `.env.local`. Both files are ignored by git.
 
 Minimum required:
 
 ```env
 DATABASE_URL="postgresql://USER:PASSWORD@HOST/DB?sslmode=require"
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="pk_test_..."
+CLERK_SECRET_KEY="sk_test_..."
 ```
 
 See `.env.example` for placeholders.
@@ -131,6 +135,22 @@ Open:
 
 ---
 
+## Demo data (seed)
+
+Populate a demo org + users + memberships + audit logs:
+
+```bash
+npm run seed
+```
+
+This prints:
+
+- `orgId`
+- `ownerUserId` / `viewerUserId`
+- A ready-to-run request to test RBAC
+
+---
+
 ## API endpoints (current)
 
 | Method | Route | Description |
@@ -142,15 +162,20 @@ Open:
 
 ## RBAC testing (dev-only)
 
-Until real auth is wired, RBAC can be tested using a dev-only header:
+Until real auth is fully wired into API routes, RBAC can be tested using a dev-only header:
 
 **Header:** `x-user-id: <USER_ID>`
 
-**Example:**
+**Example (Windows PowerShell):**
 
 ```bash
-curl -H "x-user-id: YOUR_USER_ID" \
-  http://localhost:3000/api/orgs/YOUR_ORG_ID/members
+curl.exe -H "x-user-id: YOUR_USER_ID" "http://localhost:3000/api/orgs/YOUR_ORG_ID/members"
+```
+
+**Example (macOS/Linux):**
+
+```bash
+curl -H "x-user-id: YOUR_USER_ID" "http://localhost:3000/api/orgs/YOUR_ORG_ID/members"
 ```
 
 **Expected responses:**
