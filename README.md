@@ -1,4 +1,3 @@
-# Huddle
 
 **Huddle** is a **multi-tenant client portal** where teams collaborate with customers — built as a production-style full-stack project.
 
