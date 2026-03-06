@@ -1,4 +1,3 @@
-
 **Huddle** is a **multi-tenant client portal** where teams collaborate with customers — built as a production-style full-stack project.
 
 > Focus: **tenant isolation**, **RBAC**, **audit logs**, and (next) **Stripe subscriptions**.
@@ -44,7 +43,7 @@ High-level ownership rules:
 
 Key folders:
 
-- `features/auth` — RBAC + auth helpers
+- `features/auth` — auth helpers + Clerk user mapping
 - `features/orgs` — org membership + tenant guards
 - `features/audit` — audit logs (schema + services)
 - `shared/db` — Prisma client
@@ -69,13 +68,12 @@ This repo is intentionally built in small, reviewable milestones so it's easy to
 - ✅ Prisma + Postgres (Neon) configured
 - ✅ Core multi-tenant schema: User, Org, Membership, AuditLog
 - ✅ RBAC helpers + server-side permission guard
-- ✅ Example protected endpoint: `GET /api/orgs/:orgId/members` *(dev-only `x-user-id` header for now)*
-- ✅ Clerk auth for UI + route protection (API user mapping pending)
+- ✅ Example protected endpoint: `GET /api/orgs/:orgId/members` _(Clerk session + org RBAC enforced server-side)_
+- ✅ Clerk auth for UI + route protection + API user mapping
 - ✅ Seed script (`npm run seed`) — demo org, users, memberships, audit logs
 
 **Planned next:**
 
-- ⏳ Replace dev-only `x-user-id` header with Clerk session in API routes
 - ⏳ Stripe subscriptions + webhooks + entitlement gating
 - ⏳ Projects/Cases module + file uploads
 - ⏳ E2E tests + CI
@@ -94,7 +92,7 @@ npm install
 
 ### 2) Environment variables
 
-Create `.env` (for Prisma CLI) and `.env.local` (for Next.js runtime).
+Create `.env` (for Prisma CLI) and `.env.local` (for Next.js runtime).  
 Prisma CLI reads `.env`; Next.js reads `.env.local`. Both files are ignored by git.
 
 Minimum required:
@@ -116,7 +114,7 @@ npx prisma generate
 npx prisma migrate dev
 ```
 
-(Optional)
+Optional:
 
 ```bash
 npx prisma studio
@@ -146,8 +144,9 @@ npm run seed
 This prints:
 
 - `orgId`
-- `ownerUserId` / `viewerUserId`
-- A ready-to-run request to test RBAC
+- seeded emails to use with Clerk sign-in
+- an unauthenticated `curl.exe` check
+- the authenticated browser URL to test
 
 ---
 
@@ -156,38 +155,38 @@ This prints:
 | Method | Route | Description |
 | ------ | ----- | ----------- |
 | `GET` | `/api/health` | Basic service health response |
-| `GET` | `/api/orgs/:orgId/members` | Org members list (RBAC-protected; dev-only auth header for now) |
+| `GET` | `/api/orgs/:orgId/members` | Org members list (RBAC-protected; Clerk session required) |
 
 ---
 
-## RBAC testing (dev-only)
+## Authenticated API testing
 
-Until real auth is fully wired into API routes, RBAC can be tested using a dev-only header:
-
-**Header:** `x-user-id: <USER_ID>`
-
-**Example (Windows PowerShell):**
+1. Run:
 
 ```bash
-curl.exe -H "x-user-id: YOUR_USER_ID" "http://localhost:3000/api/orgs/YOUR_ORG_ID/members"
+npm run seed
 ```
 
-**Example (macOS/Linux):**
+2. Create or sign in to a Clerk user with one of the seeded emails:
+   - `owner@huddle.dev`
+   - `viewer@huddle.dev`
 
-```bash
-curl -H "x-user-id: YOUR_USER_ID" "http://localhost:3000/api/orgs/YOUR_ORG_ID/members"
+3. Open this URL in the same signed-in browser session:
+
+```text
+http://localhost:3000/api/orgs/YOUR_ORG_ID/members
 ```
 
 **Expected responses:**
 
 | Status | Meaning |
 | ------ | ------- |
-| `200` | Allowed |
-| `403` | Not a member / missing permission |
-| `401` | Header missing |
+| `200` | Signed in and allowed |
+| `403` | Signed in but not a member / missing permission |
+| `401` | Not signed in |
 
 ---
 
 ## License
 
-MIT
+MITnpm run lint
