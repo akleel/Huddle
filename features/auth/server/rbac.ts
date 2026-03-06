@@ -7,7 +7,9 @@ export type Permission =
   | "org:members:manage"
   | "audit:read"
   | "audit:write"
-  | "billing:manage";
+  | "billing:manage"
+  | "projects:read"
+  | "projects:write";
 
 const rolePermissions: Readonly<Record<Role, ReadonlySet<Permission>>> = {
   OWNER: new Set<Permission>([
@@ -17,6 +19,8 @@ const rolePermissions: Readonly<Record<Role, ReadonlySet<Permission>>> = {
     "audit:read",
     "audit:write",
     "billing:manage",
+    "projects:read",
+    "projects:write",
   ]),
   ADMIN: new Set<Permission>([
     "org:read",
@@ -24,9 +28,23 @@ const rolePermissions: Readonly<Record<Role, ReadonlySet<Permission>>> = {
     "org:members:manage",
     "audit:read",
     "audit:write",
+    "projects:read",
+    "projects:write",
   ]),
-  MEMBER: new Set<Permission>(["org:read", "org:members:read", "audit:read", "audit:write"]),
-  VIEWER: new Set<Permission>(["org:read", "org:members:read", "audit:read"]),
+  MEMBER: new Set<Permission>([
+    "org:read",
+    "org:members:read",
+    "audit:read",
+    "audit:write",
+    "projects:read",
+    "projects:write",
+  ]),
+  VIEWER: new Set<Permission>([
+    "org:read",
+    "org:members:read",
+    "audit:read",
+    "projects:read",
+  ]),
 } as const;
 
 export function can(role: Role, permission: Permission): boolean {
