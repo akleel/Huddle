@@ -1,4 +1,4 @@
-﻿// shared/env/env.ts
+// shared/env/env.ts
 import { z } from "zod";
 
 const serverEnvSchema = z

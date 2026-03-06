@@ -1,4 +1,4 @@
-﻿# Huddle Architecture
+# Huddle Architecture
 
 ## Ownership
 - `app/`: routing + composition only.
