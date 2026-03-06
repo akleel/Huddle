@@ -5,8 +5,8 @@ import dotenv from "dotenv";
 
 type SeedResult = {
   orgId: string;
-  ownerUserId: string;
-  viewerUserId: string;
+  ownerEmail: string;
+  viewerEmail: string;
 };
 
 function loadEnv(): void {
@@ -16,8 +16,10 @@ function loadEnv(): void {
     path.join(repoRoot, ".env.local"),
   ];
 
-  for (const p of envPaths) {
-    if (fs.existsSync(p)) dotenv.config({ path: p, override: true });
+  for (const envPath of envPaths) {
+    if (fs.existsSync(envPath)) {
+      dotenv.config({ path: envPath, override: true });
+    }
   }
 }
 
@@ -91,7 +93,32 @@ async function seed(input: {
     skipDuplicates: true,
   });
 
-  return { orgId: org.id, ownerUserId: owner.id, viewerUserId: viewer.id };
+  return {
+    orgId: org.id,
+    ownerEmail,
+    viewerEmail,
+  };
+}
+
+function printInstructions(result: SeedResult): void {
+  console.log("✅ Seed complete");
+  console.log({
+    orgId: result.orgId,
+    ownerEmail: result.ownerEmail,
+    viewerEmail: result.viewerEmail,
+  });
+
+  console.log("\nUnauthenticated check (expect 401):");
+  console.log(
+    `curl.exe "http://localhost:3000/api/orgs/${result.orgId}/members"`,
+  );
+
+  console.log("\nCreate or sign in to a Clerk user with one of these emails:");
+  console.log(`- ${result.ownerEmail} (OWNER)`);
+  console.log(`- ${result.viewerEmail} (VIEWER)`);
+
+  console.log("\nAuthenticated check (same signed-in browser session):");
+  console.log(`http://localhost:3000/api/orgs/${result.orgId}/members`);
 }
 
 async function main(): Promise<void> {
@@ -109,30 +136,14 @@ async function main(): Promise<void> {
   ]);
 
   try {
-    const res = await seed({ prisma, Role });
-
-    console.log("✅ Seed complete");
-
-    console.log(res);
-
-    console.log("\nTry RBAC endpoint (Windows PowerShell):");
-
-    console.log(
-      `curl.exe -H "x-user-id: ${res.ownerUserId}" "http://localhost:3000/api/orgs/${res.orgId}/members"`,
-    );
-
-    console.log("\nTry RBAC endpoint (macOS/Linux):");
-
-    console.log(
-      `curl -H "x-user-id: ${res.ownerUserId}" "http://localhost:3000/api/orgs/${res.orgId}/members"`,
-    );
+    const result = await seed({ prisma, Role });
+    printInstructions(result);
   } finally {
     await prisma.$disconnect();
   }
 }
 
 main().catch((err: unknown) => {
-
-    console.error("❌ Seed failed", err);
+  console.error("❌ Seed failed", err);
   process.exitCode = 1;
 });
