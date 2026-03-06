@@ -15,26 +15,34 @@ enum Role {
   VIEWER
 }
 
+enum ProjectStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
 model User {
-  id         String   @id @default(cuid())
-  externalId String?  @unique
-  email      String?  @unique
+  id         String  @id @default(cuid())
+  externalId String? @unique
+  email      String? @unique
 
-  memberships Membership[]
-  auditLogs   AuditLog[] @relation("AuditActor")
+  memberships     Membership[]
+  auditLogs       AuditLog[]   @relation("AuditActor")
+  createdProjects Project[]    @relation("ProjectCreator")
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Org {
-  id          String @id @default(cuid())
+  id          String  @id @default(cuid())
   name        String
-  slug        String @unique
+  slug        String  @unique
   description String?
 
   memberships Membership[]
   auditLogs   AuditLog[]
+  projects    Project[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,8 +51,8 @@ model Org {
 }
 
 model Membership {
-  id     String @id @default(cuid())
-  role   Role   @default(MEMBER)
+  id   String @id @default(cuid())
+  role Role   @default(MEMBER)
 
   orgId  String
   userId String
@@ -61,14 +69,33 @@ model Membership {
   @@index([role])
 }
 
+model Project {
+  id              String        @id @default(cuid())
+  orgId           String
+  createdByUserId String
+  title           String
+  description     String?
+  status          ProjectStatus @default(DRAFT)
+
+  org       Org  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  createdBy User @relation("ProjectCreator", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([orgId, createdAt])
+  @@index([createdByUserId])
+  @@index([status])
+}
+
 model AuditLog {
   id String @id @default(cuid())
 
   orgId String
-  org   Org @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  org   Org    @relation(fields: [orgId], references: [id], onDelete: Cascade)
 
   actorUserId String?
-  actor       User? @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
+  actor       User?   @relation("AuditActor", fields: [actorUserId], references: [id], onDelete: SetNull)
 
   action     String
   entityType String
