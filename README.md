@@ -26,7 +26,7 @@ Most "portfolio apps" are single-tenant and skip the hard parts. Huddle is desig
 ## Tech stack
 
 - **Next.js** (App Router) + **TypeScript**
-- **Clerk** (auth — modal sign-in/sign-up, middleware route protection)
+- **Clerk** (auth — modal sign-in/sign-up, route protection via `proxy.ts`)
 - **Postgres** (Neon) + **Prisma v7** (Postgres adapter)
 - **Zod** (typed env)
 - **ESLint** + **Tailwind**
@@ -47,6 +47,7 @@ Key folders:
 - `features/orgs` — org membership + tenant guards
 - `features/audit` — audit logs (schema + services)
 - `shared/db` — Prisma client
+- `shared/env` — typed env validation
 - `shared/http` — typed errors
 
 ---
@@ -70,13 +71,15 @@ This repo is intentionally built in small, reviewable milestones so it's easy to
 - ✅ RBAC helpers + server-side permission guard
 - ✅ Example protected endpoint: `GET /api/orgs/:orgId/members` _(Clerk session + org RBAC enforced server-side)_
 - ✅ Clerk auth for UI + route protection + API user mapping
+- ✅ Typed env parsing in `shared/env/env.ts`
 - ✅ Seed script (`npm run seed`) — demo org, users, memberships, audit logs
 
 **Planned next:**
 
-- ⏳ Stripe subscriptions + webhooks + entitlement gating
-- ⏳ Projects/Cases module + file uploads
+- ⏳ Projects/Cases module
+- ⏳ File uploads
 - ⏳ E2E tests + CI
+- ⏳ Stripe subscriptions + webhooks + entitlement gating
 
 ---
 
@@ -152,10 +155,10 @@ This prints:
 
 ## API endpoints (current)
 
-| Method | Route | Description |
-| ------ | ----- | ----------- |
-| `GET` | `/api/health` | Basic service health response |
-| `GET` | `/api/orgs/:orgId/members` | Org members list (RBAC-protected; Clerk session required) |
+| Method | Route                      | Description                                               |
+| ------ | -------------------------- | --------------------------------------------------------- |
+| `GET`  | `/api/health`              | Basic service health response                             |
+| `GET`  | `/api/orgs/:orgId/members` | Org members list (RBAC-protected; Clerk session required) |
 
 ---
 
@@ -179,14 +182,14 @@ http://localhost:3000/api/orgs/YOUR_ORG_ID/members
 
 **Expected responses:**
 
-| Status | Meaning |
-| ------ | ------- |
-| `200` | Signed in and allowed |
-| `403` | Signed in but not a member / missing permission |
-| `401` | Not signed in |
+| Status | Meaning                                         |
+| ------ | ----------------------------------------------- |
+| `200`  | Signed in and allowed                           |
+| `403`  | Signed in but not a member / missing permission |
+| `401`  | Not signed in                                   |
 
 ---
 
 ## License
 
-MITnpm run lint
+MIT
