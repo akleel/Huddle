@@ -1,35 +1,24 @@
-// app/api/orgs/[orgId]/members/route.ts
-import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { getDevUserId } from "@/shared/auth/dev-auth";
-import { requireOrgPermission } from "@/features/orgs/server/guards";
-import { prisma } from "@/shared/db/prisma";
+import { listOrgMembersForCurrentUser } from "@/features/orgs/server/list-members.service";
 import { AppError } from "@/shared/http/errors";
 
 export async function GET(
-  req: NextRequest,
+  _request: Request,
   ctx: { params: Promise<{ orgId: string }> }
 ): Promise<NextResponse> {
   try {
-    const userId = getDevUserId(req);
     const { orgId } = await ctx.params;
+    const result = await listOrgMembersForCurrentUser({ orgId });
 
-    await requireOrgPermission({ userId, orgId, permission: "org:members:read" });
-
-    const members = await prisma.membership.findMany({
-      where: { orgId },
-      select: {
-        role: true,
-        user: { select: { id: true, email: true, externalId: true } },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    return NextResponse.json({ orgId, members });
+    return NextResponse.json(result);
   } catch (err: unknown) {
     if (err instanceof AppError) {
       return NextResponse.json({ error: err.message }, { status: err.status });
     }
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Internal Server Error" },
+      { status: 500 }
+    );
   }
 }
