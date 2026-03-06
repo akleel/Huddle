@@ -9,6 +9,11 @@ type SeedResult = {
   viewerEmail: string;
 };
 
+type SeedInput = {
+  prisma: typeof import("@/shared/db/prisma").prisma;
+  Role: typeof import("@prisma/client").Role;
+};
+
 function loadEnv(): void {
   const repoRoot = process.cwd();
   const envPaths = [
@@ -18,15 +23,40 @@ function loadEnv(): void {
 
   for (const envPath of envPaths) {
     if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath, override: true });
+      dotenv.config({ path: envPath, override: true, quiet: true });
     }
   }
 }
 
-async function seed(input: {
-  prisma: typeof import("@/shared/db/prisma").prisma;
-  Role: typeof import("@prisma/client").Role;
-}): Promise<SeedResult> {
+async function resetDemoAuditLogs(
+  prisma: SeedInput["prisma"],
+  input: {
+    orgId: string;
+    ownerUserId: string;
+    viewerUserId: string;
+  },
+): Promise<void> {
+  await prisma.auditLog.deleteMany({
+    where: {
+      orgId: input.orgId,
+      actorUserId: input.ownerUserId,
+      OR: [
+        {
+          action: "org.created",
+          entityType: "Org",
+          entityId: input.orgId,
+        },
+        {
+          action: "member.added",
+          entityType: "User",
+          entityId: input.viewerUserId,
+        },
+      ],
+    },
+  });
+}
+
+async function seed(input: SeedInput): Promise<SeedResult> {
   const { prisma, Role } = input;
 
   const ownerEmail = "owner@huddle.dev";
@@ -71,6 +101,12 @@ async function seed(input: {
     select: { id: true },
   });
 
+  await resetDemoAuditLogs(prisma, {
+    orgId: org.id,
+    ownerUserId: owner.id,
+    viewerUserId: viewer.id,
+  });
+
   await prisma.auditLog.createMany({
     data: [
       {
@@ -79,7 +115,11 @@ async function seed(input: {
         action: "org.created",
         entityType: "Org",
         entityId: org.id,
-        metadata: { seed: true, name: org.name, slug: org.slug },
+        metadata: {
+          seed: true,
+          name: org.name,
+          slug: org.slug,
+        },
       },
       {
         orgId: org.id,
@@ -87,10 +127,13 @@ async function seed(input: {
         action: "member.added",
         entityType: "User",
         entityId: viewer.id,
-        metadata: { seed: true, email: viewer.email, role: Role.VIEWER },
+        metadata: {
+          seed: true,
+          email: viewer.email,
+          role: Role.VIEWER,
+        },
       },
     ],
-    skipDuplicates: true,
   });
 
   return {
